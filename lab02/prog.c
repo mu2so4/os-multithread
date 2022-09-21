@@ -17,12 +17,12 @@ int main() {
 	pthread_t thread_10;
 	if(pthread_attr_init(&attrs) != 0) {
 		perror("pthread attr init");
-		exit(-1);
+		pthread_exit(NULL);
 	}
 
 	if(pthread_create(&thread_10, &attrs, thread_sub, NULL) != 0) {
 		perror("pthread init");
-		return -1;
+		pthread_exit(NULL);
 	}
 	print10lines("main");
 	pthread_join(thread_10, NULL);
