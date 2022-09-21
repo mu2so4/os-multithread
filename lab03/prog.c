@@ -19,7 +19,7 @@ int main() {
 	pthread_t threads[POOL_SIZE];
 	if(pthread_attr_init(&attrs) != 0) {
 		perror("pthread attr init");
-		exit(-1);
+		pthread_exit(NULL);
 	}
 
 	char names[POOL_SIZE][10];
@@ -27,7 +27,7 @@ int main() {
 		sprintf(names[index], "thread%d", index);
 		if(pthread_create(threads + index, &attrs, thread_sub, names[index]) != 0) {
 			perror("pthread init");
-			return -1;
+			pthread_exit(NULL);
 		}
 	}
 
