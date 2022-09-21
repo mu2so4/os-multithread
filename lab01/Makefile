@@ -3,9 +3,9 @@ CFLAGS=-c -Wall -Wextra
 
 FILENAME=prog
 
-all: $(FILENAME)
+all: $(FILENAME).out
 
-$(FILENAME): $(FILENAME).o
+$(FILENAME).out: $(FILENAME).o
 	$(CC) -pthread $(FILENAME).o -o $(FILENAME).out -lm
 
 $(FILENAME).o: $(FILENAME).c
