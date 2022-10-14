@@ -9,8 +9,9 @@ void farewell() {
 
 void *thread_sub() {
 	pthread_cleanup_push(farewell, NULL);
-	for(int iteration = 0; iteration < 10000000; iteration++)
+	for(int iteration = 0; iteration < 10000000; iteration++) {
 		printf("thread: %d\n", iteration);
+	}
 	pthread_cleanup_pop(1);
 	pthread_exit(NULL);
 }
@@ -29,6 +30,7 @@ int main() {
 	}
 	sleep(2);
 	pthread_cancel(thread_10);
+	pthread_join(thread_10, NULL);
 	pthread_attr_destroy(&attrs);
 	pthread_exit(NULL);
 }
