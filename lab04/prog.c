@@ -23,6 +23,7 @@ int main() {
 	}
 	sleep(2);
 	pthread_cancel(thread_10);
+	pthread_join(thread_10, NULL);
 	pthread_attr_destroy(&attrs);
 	pthread_exit(NULL);
 }
