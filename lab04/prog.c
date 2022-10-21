@@ -4,8 +4,13 @@
 #include <unistd.h>
 
 void *thread_sub() {
-	for(int iteration = 0; iteration < 10000000; iteration++)
-		printf("thread: %d\n", iteration);
+	pthread_setcanceltype()
+	int e = -1;
+	for(;;) {
+		//printf("thread: %d\n", iteration);
+		//pthread_testcancel();
+		e++;
+	}
 	pthread_exit(NULL);
 }
 
@@ -23,7 +28,13 @@ int main() {
 	}
 	sleep(2);
 	pthread_cancel(thread_10);
-	pthread_join(thread_10, NULL);
+	printf("before joining\n");
+	if(pthread_join(thread_10, NULL) != 0) {
+		printf("thread joining failed\n");
+		pthread_attr_destroy(&attrs);
+		pthread_exit(NULL);
+	}
+	printf("subthread was killed\n");
 	pthread_attr_destroy(&attrs);
 	pthread_exit(NULL);
 }
