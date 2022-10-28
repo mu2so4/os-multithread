@@ -19,18 +19,16 @@ void *partical_sum(void *args) {
 	long long from = STEP_COUNT * offset / thread_count;
 	long long to = STEP_COUNT * (offset + 1) / thread_count;
     
-	res_t part_sum = 0.0;
+	res_t* part_sum = calloc(1, sizeof(res_t));
 	for(long long iteration = from; iteration < to; iteration++) {
-		part_sum += 1. / (iteration * 4. + 1.) - 1. / (iteration * 4. + 3.);
+		*part_sum += 1. / (iteration * 4. + 1.) - 1. / (iteration * 4. + 3.);
 	}
-	printf("%.14f\n", part_sum);
-    
-	pthread_exit((void*) &part_sum);
+	pthread_exit((void*) part_sum);
 }
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
-		fprintf(stderr, "Wrong argc");
+		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
 	}
 	int thread_count = atoi(argv[1]);
@@ -65,10 +63,11 @@ int main(int argc, char **argv) {
 		}
 		else {
 			result += *part_sum;
+			free(part_sum);
 		}
 	}
 	result *= 4;
-	printf("Pi=%.8f\n", result);
+	printf("Pi=%.15f\n", result);
 
 	free(threads);
 	free(sargs);
