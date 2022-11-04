@@ -49,13 +49,20 @@ int main(int argc, char **argv) {
 		sargs[index].offset = index;
 	}
 
+	int true_count = thread_count;
 	for(int index = 0; index < thread_count; index++) {
-		pthread_create(threads + index, NULL, partical_sum, sargs +
-				index);
+		if(pthread_create(threads + index, NULL, partical_sum,
+				sargs + index) != 0) {
+			perror("couldn't create a new thread");
+			printf("created %d threads instead of %d\n", index,
+					thread_count);
+			true_count = index;
+			break;
+		}
 	}
 
 	res_t result = 0;
-	for(int index = 0; index < thread_count; index++) {
+	for(int index = 0; index < true_count; index++) {
 		res_t *part_sum;
 		if(pthread_join(threads[index], (void**) &part_sum) != 0) {
 			perror("pthread join");
