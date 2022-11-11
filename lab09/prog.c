@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 
 typedef struct sum_args {
 	int thread_count;
@@ -10,23 +12,28 @@ typedef struct sum_args {
 
 typedef double res_t;
 
-#define STEP_COUNT 200000000l
+int is_running = 1;
+
+void handle_int(int signum) {
+	if(signum == SIGINT) {
+		is_running = 0;
+	}
+}
 
 void *partical_sum(void *args) {
 	sum_args *params = (sum_args*) args;
 	int thread_count = params->thread_count;
 	int offset = params->offset;
-	long long from = STEP_COUNT * offset / thread_count;
-	long long to = STEP_COUNT * (offset + 1) / thread_count;
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
-	for(long long iteration = from; iteration < to; iteration++) {
+	for(long long iteration = offset; is_running; iteration += thread_count) {
 		*part_sum += 1. / (iteration * 4. + 1.) - 1. / (iteration * 4. + 3.);
 	}
 	pthread_exit((void*) part_sum);
 }
 
 int main(int argc, char **argv) {
+	signal(SIGINT, handle_int);
 	if(argc != 2) {
 		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
@@ -74,7 +81,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	result *= 4;
-	printf("Pi=%.15f\n", result);
+	printf("\nPi=%.15f\n", result);
 
 	free(threads);
 	free(sargs);
