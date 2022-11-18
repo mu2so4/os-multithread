@@ -11,12 +11,12 @@
 typedef struct sum_args {
 	int thread_count;
 	int offset;
-	//pthread_barrier_t *barrier;
 } sum_args;
 
 typedef double res_t;
 
 int is_running = 1;
+static pthread_barrier_t barrier;
 
 void handle_int(int signum) {
 	if(signum == SIGINT) {
@@ -37,6 +37,7 @@ void *partical_sum(void *args) {
 			long long member = (it * thread_count + offset) * 4 + 1;
 			*part_sum += 1. / member - 1. / (member + 2.);
 		}
+		pthread_barrier_wait(&barrier);
 	}
 	pthread_exit((void*) part_sum);
 }
@@ -69,13 +70,19 @@ int main(int argc, char **argv) {
 		pthread_exit(NULL);
 	}
 
+	if(pthread_barrier_init(&barrier, NULL, thread_count) < 0) {
+		perror("barrier init");
+		free(threads);
+		free(sargs);
+		pthread_exit(NULL);
+	}
+
 	for(int index = 0; index < thread_count; index++) {
 		sargs[index].thread_count = thread_count;
 		sargs[index].offset = index;
 	}
 
 	int true_count = thread_count;
-	//pthread_barrier_t bar;
 	for(int index = 0; index < thread_count; index++) {
 		if(pthread_create(threads + index, NULL, partical_sum,
 				sargs + index) != 0) {
@@ -106,6 +113,7 @@ int main(int argc, char **argv) {
 
 	free(threads);
 	free(sargs);
+	pthread_barrier_destroy(&barrier);
 	pthread_exit(NULL);
 }
 
