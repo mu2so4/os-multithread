@@ -16,7 +16,6 @@ typedef struct sum_args {
 typedef double res_t;
 
 int is_running = 1;
-static pthread_barrier_t barrier;
 
 void handle_int(int signum) {
 	if(signum == SIGINT) {
@@ -28,36 +27,16 @@ void *partical_sum(void *args) {
 	sum_args *params = (sum_args*) args;
 	int thread_count = params->thread_count;
 	int offset = params->offset;
-
-	sigset_t set;
-	sigfillset(&set);
-	pthread_sigmask(SIG_UNBLOCK, &set, NULL);
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
-	const int block_size = 10000;
-	for(long long block_num = 0; is_running; block_num++) {
-		for(long long iteration = 0; iteration < block_size; iteration++) {
-			long long it = block_size * block_num + iteration;
-			long long member = (it * thread_count + offset) * 4 + 1;
-			*part_sum += 1. / member - 1. / (member + 2.);
-		}
-		pthread_barrier_wait(&barrier);
+	for(long long iteration = offset; is_running; iteration += thread_count) {
+		*part_sum += 1. / (iteration * 4. + 1.) - 1. / (iteration * 4. + 3.);
 	}
 	pthread_exit((void*) part_sum);
 }
 
-void *sig_thread() {
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
-	int sig;
-	sigwait(&set, &sig);
-	is_running = 0;
-	pthread_exit(NULL);
-}
-
 int main(int argc, char **argv) {
+	signal(SIGINT, handle_int);
 	if(argc != 2) {
 		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
@@ -84,13 +63,6 @@ int main(int argc, char **argv) {
 		pthread_exit(NULL);
 	}
 
-	if(pthread_barrier_init(&barrier, NULL, thread_count) < 0) {
-		perror("barrier init");
-		free(threads);
-		free(sargs);
-		pthread_exit(NULL);
-	}
-
 	for(int index = 0; index < thread_count; index++) {
 		sargs[index].thread_count = thread_count;
 		sargs[index].offset = index;
@@ -107,16 +79,6 @@ int main(int argc, char **argv) {
 			break;
 		}
 	}
-
-	//pthread_t sig_thr;
-	//pthread_create(&sig_thr, NULL, sig_thread, NULL);
-	//pthread_join(sig_thr, NULL);
-	signal(SIGINT, handle_int);
-	sigset_t set;
-	sigfillset(&set);
-	int sig;
-	sigwait(&set, &sig);
-	is_running = 0;
 
 	res_t result = 0;
 	for(int index = 0; index < true_count; index++) {
@@ -137,7 +99,6 @@ int main(int argc, char **argv) {
 
 	free(threads);
 	free(sargs);
-	pthread_barrier_destroy(&barrier);
 	pthread_exit(NULL);
 }
 
