@@ -6,16 +6,16 @@
 #include <unistd.h>
 #include <math.h>
 
-#define MAX_THREAD_COUNT 30000
+#define MAX_THREAD_COUNT 20000
 
 typedef struct sum_args {
-	int thread_count;
 	int offset;
 } sum_args;
 
 typedef double res_t;
 
 int is_running = 1;
+int thread_count;
 
 void handle_int(int signum) {
 	if(signum == SIGINT) {
@@ -25,12 +25,12 @@ void handle_int(int signum) {
 
 void *partical_sum(void *args) {
 	sum_args *params = (sum_args*) args;
-	int thread_count = params->thread_count;
 	int offset = params->offset;
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
-	for(long long iteration = offset; is_running; iteration += thread_count) {
-		*part_sum += 1. / (iteration * 4. + 1.) - 1. / (iteration * 4. + 3.);
+	for(long long iteration = 0; is_running; iteration++) {
+		int pos = (iteration * thread_count + offset) * 4;
+		*part_sum += 1. / (pos + 1.) - 1. / (pos + 3.);
 	}
 	pthread_exit((void*) part_sum);
 }
@@ -41,22 +41,20 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
 	}
-	int thread_count = atoi(argv[1]);
+	thread_count = atoi(argv[1]);
 	if(thread_count > MAX_THREAD_COUNT) {
 		thread_count = MAX_THREAD_COUNT;
-		fprintf(stderr, "thread count decreased to %d\n", thread_count);
+		fprintf(stderr, "thread count decreased to %d\n", MAX_THREAD_COUNT);
 	}
 
 	pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) *
 			thread_count);
-
 	if(threads == NULL) {
 		perror("thread_t malloc");
 		pthread_exit(NULL);
 	}
 
 	sum_args *sargs = (sum_args*) malloc(sizeof(sum_args) * thread_count);
-
 	if(sargs == NULL) {
 		perror("sargs malloc");
 		free(threads);
@@ -64,24 +62,22 @@ int main(int argc, char **argv) {
 	}
 
 	for(int index = 0; index < thread_count; index++) {
-		sargs[index].thread_count = thread_count;
 		sargs[index].offset = index;
 	}
 
-	int true_count = thread_count;
 	for(int index = 0; index < thread_count; index++) {
 		if(pthread_create(threads + index, NULL, partical_sum,
 				sargs + index) != 0) {
 			perror("couldn't create a new thread");
 			printf("created %d threads instead of %d\n", index,
 					thread_count);
-			true_count = index;
+			thread_count = index;
 			break;
 		}
 	}
 
 	res_t result = 0;
-	for(int index = 0; index < true_count; index++) {
+	for(int index = 0; index < thread_count; index++) {
 		res_t *part_sum;
 		if(pthread_join(threads[index], (void**) &part_sum) != 0) {
 			perror("pthread join");
