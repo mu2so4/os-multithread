@@ -28,6 +28,10 @@ void *partical_sum(void *args) {
 	sum_args *params = (sum_args*) args;
 	int thread_count = params->thread_count;
 	int offset = params->offset;
+
+	sigset_t set;
+	sigfillset(&set);
+	pthread_sigmask(SIG_UNBLOCK, &set, NULL);
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
 	const int block_size = 10000;
@@ -42,8 +46,18 @@ void *partical_sum(void *args) {
 	pthread_exit((void*) part_sum);
 }
 
+void *sig_thread() {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
+	int sig;
+	sigwait(&set, &sig);
+	is_running = 0;
+	pthread_exit(NULL);
+}
+
 int main(int argc, char **argv) {
-	signal(SIGINT, handle_int);
 	if(argc != 2) {
 		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
@@ -93,6 +107,16 @@ int main(int argc, char **argv) {
 			break;
 		}
 	}
+
+	//pthread_t sig_thr;
+	//pthread_create(&sig_thr, NULL, sig_thread, NULL);
+	//pthread_join(sig_thr, NULL);
+	signal(SIGINT, handle_int);
+	sigset_t set;
+	sigfillset(&set);
+	int sig;
+	sigwait(&set, &sig);
+	is_running = 0;
 
 	res_t result = 0;
 	for(int index = 0; index < true_count; index++) {
