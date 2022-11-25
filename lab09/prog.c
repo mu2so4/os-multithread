@@ -26,11 +26,15 @@ void handle_int(int signum) {
 void *partical_sum(void *args) {
 	sum_args *params = (sum_args*) args;
 	int offset = params->offset;
+	const int block_size = 10000;
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
-	for(long long iteration = 0; is_running; iteration++) {
-		int pos = (iteration * thread_count + offset) * 4;
-		*part_sum += 1. / (pos + 1.) - 1. / (pos + 3.);
+	for(long long block_num = 0; is_running; block_num++) {
+		for(long long iteration = block_size * block_num; iteration <
+				block_size * (block_num + 1); iteration++) {
+			int pos = (iteration * thread_count + offset) * 4;
+			*part_sum += 1. / (pos + 1.) - 1. / (pos + 3.);
+		}
 	}
 	pthread_exit((void*) part_sum);
 }
