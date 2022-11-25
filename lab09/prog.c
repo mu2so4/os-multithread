@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -5,6 +6,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <math.h>
+#include <sys/types.h>
 
 #define MAX_THREAD_COUNT 20000
 
@@ -17,13 +19,17 @@ typedef double res_t;
 int is_running = 1;
 int thread_count;
 
-void handle_int(int signum) {
+void handle_int(int signum, siginfo_t *si, void *ctx) {
 	if(signum == SIGINT) {
 		is_running = 0;
 	}
 }
 
 void *partical_sum(void *args) {
+	sigset_t sigset;
+	sigfillset(&sigset);
+	pthread_sigmask(SIG_SETMASK, &sigset, NULL);
+
 	sum_args *params = (sum_args*) args;
 	int offset = params->offset;
 	const int block_size = 10000;
@@ -40,7 +46,12 @@ void *partical_sum(void *args) {
 }
 
 int main(int argc, char **argv) {
-	signal(SIGINT, handle_int);
+	struct sigaction sigact;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigact.sa_sigaction = handle_int;
+	sigaction(SIGINT, &sigact, NULL);
+
 	if(argc != 2) {
 		fprintf(stderr, "Wrong argc\n");
 		pthread_exit(NULL);
