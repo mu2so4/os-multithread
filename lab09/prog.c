@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -6,18 +5,19 @@
 #include <signal.h>
 #include <unistd.h>
 #include <math.h>
-#include <sys/types.h>
 
 #define MAX_THREAD_COUNT 20000
 
 typedef struct sum_args {
 	int offset;
+	int is_first_thread;
 } sum_args;
 
 typedef double res_t;
 
 int is_running = 1;
 int thread_count;
+long long last_block_num;
 
 void handle_int(int signum, siginfo_t *si, void *ctx) {
 	if(signum == SIGINT) {
@@ -26,20 +26,25 @@ void handle_int(int signum, siginfo_t *si, void *ctx) {
 }
 
 void *partical_sum(void *args) {
-	sigset_t sigset;
-	sigfillset(&sigset);
-	pthread_sigmask(SIG_SETMASK, &sigset, NULL);
+	//sigset_t sigset;
+	//sigemptyset(&sigset);
+	//pthread_sigmask(SIG_SETMASK, &sigset, NULL);
 
 	sum_args *params = (sum_args*) args;
 	int offset = params->offset;
-	const int block_size = 10000;
+	int is_main = params->is_first_thread;
+	const long long block_size = 100000;
     
 	res_t* part_sum = calloc(1, sizeof(res_t));
-	for(long long block_num = 0; is_running; block_num++) {
+	for(long long block_num = 0; is_running || (block_num < last_block_num &&
+				!is_main); block_num++) {
 		for(long long iteration = block_size * block_num; iteration <
 				block_size * (block_num + 1); iteration++) {
-			int pos = (iteration * thread_count + offset) * 4;
+			long long pos = (iteration * thread_count + offset) * 4;
 			*part_sum += 1. / (pos + 1.) - 1. / (pos + 3.);
+		}
+		if(is_main) {
+			last_block_num = block_num + 1;
 		}
 	}
 	pthread_exit((void*) part_sum);
@@ -78,6 +83,7 @@ int main(int argc, char **argv) {
 
 	for(int index = 0; index < thread_count; index++) {
 		sargs[index].offset = index;
+		sargs[index].is_first_thread = index == 0;
 	}
 
 	for(int index = 0; index < thread_count; index++) {
